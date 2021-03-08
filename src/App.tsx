@@ -3,9 +3,9 @@
 // Licensed under the MIT license.
 // ----------------------------------------------------------------------------
 
-import React from "react";
+import React, {RefObject} from "react";
 import { UserAgentApplication, AuthError, AuthResponse } from "msal";
-import { service, factories, models, IEmbedConfiguration, Report } from "powerbi-client";
+import { service, factories, models, IEmbedConfiguration, Report} from "powerbi-client";
 import "./App.css";
 import * as config from "./Config";
 
@@ -14,104 +14,36 @@ const powerbi = new service.Service(factories.hpmFactory, factories.wpmpFactory,
 let accessToken = "";
 let embedUrl = "";
 let reportContainer: HTMLElement;
-let reportRef: React.Ref<HTMLDivElement>;
-let loading: JSX.Element;
+// let reportRef: React.Ref<HTMLDivElement>;
+
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface AppProps { };
-interface AppState { accessToken: string; embedUrl: string; error: string[] };
+interface AppState { accessToken: string; embedUrl: string; error: string[], reportRef: RefObject<any>};
 
 class App extends React.Component<AppProps, AppState> {
 
     constructor(props: AppProps) {
         super(props);
+        this.state = { accessToken: "", embedUrl: "", error: [], reportRef: React.createRef()};
 
-        this.state = { accessToken: "", embedUrl: "", error: [] };
-
-        reportRef = React.createRef();
-
-        // Report container
-        loading = (
-            <div
-                id="reportContainer"
-                ref={reportRef} >
-                Loading the report...
-            </div>
-        );
     }
 
     // React function
     render(): JSX.Element {
 
-        if (this.state.error.length) {
-
-            // Cleaning the report container contents and rendering the error message in multiple lines
-            reportContainer.textContent = "";
-            this.state.error.forEach(line => {
-                reportContainer.appendChild(document.createTextNode(line));
-                reportContainer.appendChild(document.createElement("br"));
-            });
-        }
-        else if (this.state.accessToken !== "" && this.state.embedUrl !== "") {
-
-            const embedConfiguration: IEmbedConfiguration = {
-                type: "report",
-                tokenType: models.TokenType.Aad,
-                accessToken,
-                embedUrl,
-                id: config.reportId,
-                /*
-                // Enable this setting to remove gray shoulders from embedded report
-                settings: {
-                    background: models.BackgroundType.Transparent
-                }
-                */
-            };
-
-            const report = powerbi.embed(reportContainer, embedConfiguration) as Report;
-
-            // Clear any other loaded handler events
-            report.off("loaded");
-
-            // Triggers when a content schema is successfully loaded
-            report.on("loaded", function () {
-                console.log("Report load successful");
-            });
-
-            // Clear any other rendered handler events
-            report.off("rendered");
-
-            // Triggers when a content is successfully embedded in UI
-            report.on("rendered", function () {
-                console.log("Report render successful");
-            });
-
-            // Code for authoring the report
-            console.log('Start')
-            this.getActivePages(report);
-            console.log('End')
-            //Code ends for authoring the report
-
-            // Clear any other error handler event
-            report.off("error");
-
-            // Below patch of code is for handling errors that occur during embedding
-            report.on("error", function (event) {
-                const errorMsg = event.detail;
-
-                // Use errorMsg variable to log error in any destination of choice
-                console.error(errorMsg);
-            });
-        }
-
-        return loading;
+        return <div
+        id="reportContainer"
+        ref={this.state.reportRef} >
+        Loading the report...
+        </div>;
     }
 
     // React function
-    componentDidMount():void {
+    async componentDidMount():Promise<void> {
 
-        if (reportRef !== null) {
-            reportContainer = reportRef["current"];
+        if (this.state.reportRef !== null) {
+            reportContainer = this.state.reportRef["current"];
         }
 
         // User input - null check
@@ -123,6 +55,73 @@ class App extends React.Component<AppProps, AppState> {
             this.authenticate();
 
         }
+
+        let report = this.renderMyReport();
+
+        if(report !== null) {
+
+        }
+    }
+
+    renderMyReport():Report {
+
+        let report: any = null;
+
+        // console.log('Info', this.state.accessToken, this.state.embedUrl);
+
+        if (this.state.error.length) {
+            // Cleaning the report container contents and rendering the error message in multiple lines
+            reportContainer.textContent = "";
+            this.state.error.forEach(line => {
+                reportContainer.appendChild(document.createTextNode(line));
+                reportContainer.appendChild(document.createElement("br"));
+            });
+            console.log('Error', this.state.error);
+        } else {
+
+            const embedConfiguration: IEmbedConfiguration = {
+                type: "report",
+                tokenType: models.TokenType.Aad,
+                accessToken: config.accessToken,
+                embedUrl: config.embedUrl,
+                id: config.reportId,
+            };
+
+            report = powerbi.embed(reportContainer, embedConfiguration) as Report;
+
+
+            // Clear any other loaded handler events
+            report.off("loaded");
+
+            // Triggers when a content schema is successfully loaded
+           report.on("loaded", function () {
+                console.log("Report load successful");
+
+            });
+
+            // Clear any other rendered handler events
+            report.off("rendered");
+
+            // Triggers when a content is successfully embedded in UI
+            report.on("rendered", function () {
+                console.log("Report render successful");
+
+            });
+
+            // Clear any other error handler event
+            report.off("error");
+
+            // Below patch of code is for handling errors that occur during embedding
+            report.on("error", function (event:any) {
+                const errorMsg = event.detail;
+
+                // Use errorMsg variable to log error in any destination of choice
+                console.error(errorMsg);
+            });
+        }
+
+        return report;
+
     }
 
     // React function
@@ -250,10 +249,16 @@ class App extends React.Component<AppProps, AppState> {
             welcome.innerText = "Welcome, " + username;
     }
 
-    async getActivePages(report: Report) {
-        let pages = await report.getPages();
-        console.log('Pages', pages);
+    getActivePages(report: Report) : any{
 
+        let rpages: any = null;
+
+        return report.getPages().then(pages => {
+            console.log('Pages', pages);
+            rpages = pages; // Success!
+          }, reason => {
+            console.error('Reason', reason); // Error!
+          });
     }
 }
 
