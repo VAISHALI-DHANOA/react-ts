@@ -58,16 +58,17 @@ class App extends React.Component<AppProps, AppState> {
 
         let report = this.renderMyReport();
 
-        if(report !== null) {
+        // let pages = await report.getPages();
+        // console.log('Pages', pages[0]);
 
-        }
+        // let filters = await report.getFilters();
+        // console.log('Filters', filters);
+
     }
 
     renderMyReport():Report {
 
         let report: any = null;
-
-        // console.log('Info', this.state.accessToken, this.state.embedUrl);
 
         if (this.state.error.length) {
             // Cleaning the report container contents and rendering the error message in multiple lines
@@ -251,11 +252,8 @@ class App extends React.Component<AppProps, AppState> {
 
     getActivePages(report: Report) : any{
 
-        let rpages: any = null;
-
         return report.getPages().then(pages => {
             console.log('Pages', pages);
-            rpages = pages; // Success!
           }, reason => {
             console.error('Reason', reason); // Error!
           });
