@@ -86,6 +86,9 @@ class App extends React.Component<AppProps, AppState> {
                 accessToken,
                 embedUrl,
                 id: config.reportId,
+                settings: {
+                    visualRenderedEvents: true
+                }
             };
 
             report = powerbi.embed(reportContainer, embedConfiguration) as Report;

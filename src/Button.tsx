@@ -1,5 +1,5 @@
 import React from "react";
-import { Report, VisualDescriptor } from 'powerbi-client';
+import { Report } from 'powerbi-client';
 import 'powerbi-report-authoring';
 
 interface ButtonProps {myReport: any | Report};
@@ -22,18 +22,50 @@ class Button extends React.Component<ButtonProps, {}>
     async getVisInfo(): Promise<void> {
 
         const report = this.props.myReport as Report;
+        report.on("dataSelected", function(event) {
+          console.log('Data Selected'); // , event.detail);
+        })
+
+
+
+        report.on("visualRendered", function(event) {
+          console.log('Visual Rendered' , event);
+        })
+
+        // if you change a visual this is called
+        report.on("selectionChanged", function(event) {
+          console.log("Selection changed ", event);
+        })
+
         const pages = await report.getPages();
         const visuals = await pages[1].getVisuals();
 
         for(const visual of visuals) {
 
-          console.log('Visual: ', visual.title , ' Type: ', visual.type, ' Data: ');
+          console.log('Visual: ', visual.type , ' Type: ', visual.name);
 
-          const capability = await visual.getCapabilities();
-          capability.dataRoles?.forEach((role) => {
-            // print the visual type
-            console.log(role.name, ' Display Name: ', role.displayName);
-          })
+            // gets the data field on the y-axis
+            // const field = await visual.getDataFields('Y');
+            // console.log('Field ', field);
+
+            // Not working
+            // const property = await visual.getProperty({
+            //   objectName: "legend",
+            //   propertyName: "visible"});
+
+            //   console.log('Property ', property.value);
+
+            // const filters = await visual.getFilters();
+            // console.log('Filters, ', filters);
+
+
+          // const capability = await visual.getCapabilities();
+          // console.log("Capability ", capability);
+
+          // capability.dataRoles?.forEach((role) => {
+          //   // print the visual type
+          //   console.log(role.name, ' Display Name: ', role.displayName);
+          // })
 
           console.log('______________________________________________');
         }
