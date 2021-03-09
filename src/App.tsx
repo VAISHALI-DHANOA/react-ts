@@ -8,7 +8,7 @@ import { UserAgentApplication, AuthError, AuthResponse } from "msal";
 import { service, factories, models, IEmbedConfiguration, Report} from "powerbi-client";
 import "./App.css";
 import * as config from "./Config";
-
+import Button from  './Button';
 const powerbi = new service.Service(factories.hpmFactory, factories.wpmpFactory, factories.routerFactory);
 
 let accessToken = "";
@@ -19,9 +19,11 @@ let reportContainer: HTMLElement;
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface AppProps { };
-interface AppState { accessToken: string; embedUrl: string; error: string[], reportRef: RefObject<any>};
+interface AppState { accessToken: string; embedUrl: string; error: string[]; reportRef: RefObject<any>};
 
 class App extends React.Component<AppProps, AppState> {
+
+    private myReport: any = null;
 
     constructor(props: AppProps) {
         super(props);
@@ -32,15 +34,22 @@ class App extends React.Component<AppProps, AppState> {
     // React function
     render(): JSX.Element {
 
-        return <div
+        this.myReport = this.renderMyReport();
+        return (
+        <div>
+            <div
         id="reportContainer"
         ref={this.state.reportRef} >
         Loading the report...
-        </div>;
+
+        </div>
+            <Button myReport={this.myReport}></Button>
+        </div>)
+    ;
     }
 
     // React function
-    async componentDidMount():Promise<void> {
+    async componentDidMount(): Promise<void> {
 
         if (this.state.reportRef !== null) {
             reportContainer = this.state.reportRef["current"];
@@ -53,20 +62,11 @@ class App extends React.Component<AppProps, AppState> {
 
             // Authenticate the user and generate the access token
             this.authenticate();
-
         }
-
-        let report = this.renderMyReport();
-
-        // let pages = await report.getPages();
-        // console.log('Pages', pages[0]);
-
-        // let filters = await report.getFilters();
-        // console.log('Filters', filters);
 
     }
 
-    renderMyReport():Report {
+    renderMyReport(): Report {
 
         let report: any = null;
 
@@ -78,13 +78,13 @@ class App extends React.Component<AppProps, AppState> {
                 reportContainer.appendChild(document.createElement("br"));
             });
             console.log('Error', this.state.error);
-        } else {
+        } else if (this.state.accessToken !== "" && this.state.embedUrl !== "") { // comment this condition
 
             const embedConfiguration: IEmbedConfiguration = {
                 type: "report",
                 tokenType: models.TokenType.Aad,
-                accessToken: config.accessToken,
-                embedUrl: config.embedUrl,
+                accessToken,
+                embedUrl,
                 id: config.reportId,
             };
 
@@ -248,15 +248,6 @@ class App extends React.Component<AppProps, AppState> {
         const welcome = document.getElementById("welcome");
         if (welcome !== null)
             welcome.innerText = "Welcome, " + username;
-    }
-
-    getActivePages(report: Report) : any{
-
-        return report.getPages().then(pages => {
-            console.log('Pages', pages);
-          }, reason => {
-            console.error('Reason', reason); // Error!
-          });
     }
 }
 
