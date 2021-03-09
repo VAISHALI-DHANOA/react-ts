@@ -1,6 +1,8 @@
 import React from "react";
+import { Report } from 'powerbi-client';
+import 'powerbi-report-authoring';
 
-interface ButtonProps {myReport: any};
+interface ButtonProps {myReport: any | Report};
 
 class Button extends React.Component<ButtonProps, {}>
 {
@@ -11,16 +13,23 @@ class Button extends React.Component<ButtonProps, {}>
     render(): JSX.Element {
       return (
           <div>
-              <button onClick={this.getVisInfo.bind(this)}>Click on me</button>
+              <button onClick={this.getVisInfo.bind(this)}>Get Marks of Visual 1</button>
               <button onClick={this.getMarkInfo.bind(this)}> New butoon</button>
           </div>
       );
     }
 
     async getVisInfo(): Promise<void> {
-        const pages = await this.props.myReport.getPages();
-        console.log('Pages', pages);
 
+        const report = this.props.myReport as Report;
+        const pages = await report.getPages();
+        const visuals = await pages[1].getVisuals();
+        const capability = await visuals[0].getCapabilities();
+        console.log('Capability', capability);
+        capability.dataRoles?.forEach((role) => {
+          // print the visual type
+          console.log(role.name, role.displayName);
+        })
     }
 
     getMarkInfo(): void{

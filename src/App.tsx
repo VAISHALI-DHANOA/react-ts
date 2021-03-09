@@ -23,12 +23,12 @@ interface AppState { accessToken: string; embedUrl: string; error: string[]; rep
 
 class App extends React.Component<AppProps, AppState> {
 
-    private myReport: any = null;
+    private myReport: any | Report;
 
     constructor(props: AppProps) {
         super(props);
         this.state = { accessToken: "", embedUrl: "", error: [], reportRef: React.createRef()};
-
+        this.myReport = null;
     }
 
     // React function
@@ -68,7 +68,7 @@ class App extends React.Component<AppProps, AppState> {
 
     renderMyReport(): Report {
 
-        let report: any = null;
+        let report: any | Report = null;
 
         if (this.state.error.length) {
             // Cleaning the report container contents and rendering the error message in multiple lines
