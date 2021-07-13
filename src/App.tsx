@@ -9,6 +9,7 @@ import { service, factories, models, IEmbedConfiguration, Report} from "powerbi-
 import "./App.css";
 import * as config from "./Config";
 import Button from  './Button';
+import Text from "./Text";
 const powerbi = new service.Service(factories.hpmFactory, factories.wpmpFactory, factories.routerFactory);
 
 let accessToken = "";
@@ -41,9 +42,9 @@ class App extends React.Component<AppProps, AppState> {
         id="reportContainer"
         ref={this.state.reportRef} >
         Loading the report...
-
         </div>
             <Button myReport={this.myReport}></Button>
+            {/* <Text></Text> */}
         </div>)
     ;
     }
@@ -85,9 +86,18 @@ class App extends React.Component<AppProps, AppState> {
                 tokenType: models.TokenType.Aad,
                 accessToken,
                 embedUrl,
+                permissions: models.Permissions.All,
                 id: config.reportId,
                 settings: {
-                    visualRenderedEvents: true
+                    visualRenderedEvents: true,
+                    panes: {
+                        filters: {
+                            visible: true
+                        },
+                        pageNavigation: {
+                            visible: true
+                        }
+                    }
                 }
             };
 

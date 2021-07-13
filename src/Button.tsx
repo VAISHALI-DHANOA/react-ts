@@ -2,8 +2,7 @@ import React from "react";
 import { Page, Report, VisualDescriptor } from 'powerbi-client';
 import 'powerbi-report-authoring';
 import * as models from "powerbi-models";
-import { render } from "react-dom";
-import { ExitStatus } from "typescript";
+import { convertToObject } from "typescript";
 
 interface ButtonProps {myReport: any | Report};
 
@@ -24,25 +23,61 @@ class Button extends React.Component<ButtonProps, {}> {
     render(): JSX.Element {
       return (
           <div>
-              <button onClick={this.getVisInfo.bind(this)}>Register Report Events</button>
-              <button onClick={this.getMarkInfo.bind(this)}> Get Changed Visuals</button>
+              <button onClick={this.showVisInfo.bind(this)}>Log Visual Info</button>
+              <button onClick={this.applyFilter.bind(this)}>Apply Filter</button>
+              <button onClick={this.registerEvents.bind(this)}>Register Report Events</button>
+              <button onClick={this.getChangedVisuals.bind(this)}> Get Changed Visuals</button>
           </div>
       );
     }
 
-    async getVisInfo(): Promise<void> {
+    async showVisInfo(): Promise<void> {
+      this.report = this.props.myReport as Report;
+      this.pages = await this.report.getPages();
+      this.visuals = await this.pages[1].getVisuals();
 
-       this.report = this.props.myReport as Report;
-       this.pages = await this.report.getPages();
-       this.visuals = await this.pages[1].getVisuals();
+      for( const visual of this.visuals) {
 
-       for( const visual of this.visuals) {
+        console.log('Visual: ', visual.title);
+        console.log('Type: ', visual.type);
 
         if(visual.type !== 'slicer') {
           const result = await visual.exportData(models.ExportDataType.Summarized);
+          const data = result.data.split('\r');
+        //  console.log('Summarized Data: ', result.data);
           this.initialData.push({type: visual.type, result: result});
+          console.log('Data for: ', data[0], ' --> ', data[1]);
+        } else {
+          const slicerState = await visual.getSlicerState();
+          console.log('Get slicer state: ', slicerState);
         }
+
+        if(visual.type !== 'slicer' && visual.type !== 'card') {
+        const xField = await visual.getDataFields('Category');
+        console.log('X Field: ', xField);
+        const yField = await visual.getDataFields('Y');
+        console.log('Y Field: ', yField);
       }
+
+      const filters = await visual.getFilters();
+      console.log('Filters: ', filters);
+
+        // This info is not useful atm
+        //const layout = visual.layout;
+        // console.log(' Layout: ', layout);
+        // const capability = await visual.getCapabilities();
+        // capability.dataRoles?.forEach((role) => {
+        //   // print the visual type
+        //   console.log(role.name, ' Display Name: ', role.displayName);
+        // })
+
+      console.log('----------------------------------------------------');
+     }
+
+    }
+
+    async registerEvents(): Promise<void> {
+
 
         this.report.on("visualRendered", (event: any) => {
           const vis = event.detail.name as string;
@@ -61,7 +96,7 @@ class Button extends React.Component<ButtonProps, {}> {
         */
       }
 
-      async getMarkInfo(): Promise<void> {
+      async getChangedVisuals(): Promise<void> {
 
           this.finalData = [];
 
@@ -89,8 +124,7 @@ class Button extends React.Component<ButtonProps, {}> {
         for(const visual of this.visuals) {
 
             // gets the data field on the y-axis
-            // const field = await visual.getDataFields('Y');
-            // console.log('Field ', field);
+
 
             // Not working
             // const property = await visual.getProperty({
@@ -98,16 +132,6 @@ class Button extends React.Component<ButtonProps, {}> {
             //   propertyName: "visible"});
 
             //   console.log('Property ', property.value);
-
-            // const filters = await visual.getFilters();
-            // console.log('Filters, ', filters);
-
-
-          // const capability = await visual.getCapabilities();
-          // capability.dataRoles?.forEach((role) => {
-          //   // print the visual type
-          //   console.log(role.name, ' Display Name: ', role.displayName);
-          // })
 
 
           if(this.renderedVis.length) {
@@ -125,6 +149,42 @@ class Button extends React.Component<ButtonProps, {}> {
 
           console.log('______________________________________________');
         }
+      }
+
+      async applyCrossFilter(): Promise<void> {
+
+      }
+
+      // This applies filter to all the visualization. The initial vis is reduced to show only the values which are contained in the "value" array.
+      async applyFilter(): Promise<void> {
+        try {
+          const filter: models.IBasicFilter = {
+            $schema: "http://powerbi.com/product/schema#basic",
+            displaySettings: {
+              isHiddenInViewMode: false
+            },
+            target: {
+                table: "StateDim",
+                column: "State"
+            },
+            filterType: models.FilterType.Basic,
+            operator: "In",
+            values:["New York"]
+
+          };
+
+          this.report = this.props.myReport as Report;
+          this.pages = await this.report.getPages();
+          this.visuals = await this.pages[1].getVisuals();
+
+
+          for(const visual of this.visuals) {
+              await visual.setFilters([filter]);
+          }
+        } catch (error) {
+          console.log('Error --> ', error);
+        }
+
       }
 
 
