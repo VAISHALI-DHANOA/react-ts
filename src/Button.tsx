@@ -123,17 +123,6 @@ class Button extends React.Component<ButtonProps, {}> {
 
         for(const visual of this.visuals) {
 
-            // gets the data field on the y-axis
-
-
-            // Not working
-            // const property = await visual.getProperty({
-            //   objectName: "legend",
-            //   propertyName: "visible"});
-
-            //   console.log('Property ', property.value);
-
-
           if(this.renderedVis.length) {
 
             for(const vis of this.renderedVis) {
@@ -144,7 +133,6 @@ class Button extends React.Component<ButtonProps, {}> {
                 this.finalData.push({type: visual.type, result: result});
               }
             }
-
           }
 
           console.log('______________________________________________');
@@ -179,7 +167,8 @@ class Button extends React.Component<ButtonProps, {}> {
 
 
           for(const visual of this.visuals) {
-              await visual.setFilters([filter]);
+              await visual.setFilters([filter]); //updateFilters also work
+
           }
         } catch (error) {
           console.log('Error --> ', error);
@@ -187,7 +176,37 @@ class Button extends React.Component<ButtonProps, {}> {
 
       }
 
+      async setSlicerStateBI(): Promise<void> {
+        try {
+          const filter: models.IBasicFilter = {
+            $schema: "http://powerbi.com/product/schema#basic",
+            displaySettings: {
+              isHiddenInViewMode: false
+            },
+            target: {
+                table: "COVID",
+                column: "Date"
+            },
+            filterType: models.FilterType.Basic,
+            operator: "In",
+            values:["1/22/2020"]
+          };
 
+          this.report = this.props.myReport as Report;
+          this.pages = await this.report.getPages();
+          this.visuals = await this.pages[1].getVisuals();
+
+
+          for(const visual of this.visuals) {
+            if(visual.type === "slicer") {
+              console.log('Found the slicer');
+              await visual.setSlicerState({ filters: [filter] });
+            }
+          }
+        } catch (error) {
+          console.log('Error --> ', error);
+        }
+      }
 }
 
 export default Button;
