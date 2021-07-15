@@ -2,7 +2,12 @@ import React from "react";
 import { Page, Report, VisualDescriptor } from 'powerbi-client';
 import 'powerbi-report-authoring';
 import * as models from "powerbi-models";
-import { convertToObject } from "typescript";
+import Dashboard from "./Traverse/Dashboard";
+import Visual from  "./Traverse/Visual";
+import Mark from "./Traverse/Mark";
+import Axis from "./Traverse/Axis";
+import Insight from "./Traverse/Insight";
+import Interaction from "./Traverse/Interaction";
 
 interface ButtonProps {myReport: any | Report};
 
@@ -12,12 +17,15 @@ class Button extends React.Component<ButtonProps, {}> {
     private report: any | Report = null;
     private pages: Page[] = [];
     private visuals: VisualDescriptor[] = [];
+    private dashboardVisuals: Visual[];
     private initialData: {type: string; result: models.IExportDataResult}[] = [];//{type: '', result: {data : ''}}[4];
     private finalData: {type: string; result: models.IExportDataResult}[] = []; //{type: '', result: {data : ''}}[4];
-
+    private dashboard: Dashboard;
 
     constructor(props: ButtonProps) {
         super(props);
+        this.dashboard = new Dashboard([], "Dummy Domain");
+        this.dashboardVisuals = new Array<Visual>(); //only for specific dashboard
     }
 
     render(): JSX.Element {
@@ -37,42 +45,91 @@ class Button extends React.Component<ButtonProps, {}> {
       this.visuals = await this.pages[1].getVisuals();
 
       for( const visual of this.visuals) {
+        const axis = new Axis();
+        const insight = new Insight();
+        const mark = new Mark();
 
-        console.log('Visual: ', visual.title);
-        console.log('Type: ', visual.type);
-
-        if(visual.type !== 'slicer') {
-          const result = await visual.exportData(models.ExportDataType.Summarized);
-          const data = result.data.split('\r');
-        //  console.log('Summarized Data: ', result.data);
-          this.initialData.push({type: visual.type, result: result});
-          console.log('Data for: ', data[0], ' --> ', data[1]);
-        } else {
-          const slicerState = await visual.getSlicerState();
-          console.log('Get slicer state: ', slicerState);
+        if(visual.type === 'slicer') {
+          mark.mark = 'Slider';
+          mark.markControls = ['Slide'];
+        } else if (visual.type === 'card') {
+          mark.mark = 'Text';
+          mark.markControls = [];
+        } else if (visual.type === 'barChart') {
+          mark.mark = 'Bar';
+        } else if (visual.type === 'lineChart') {
+          mark.mark = 'Line';
         }
 
         if(visual.type !== 'slicer' && visual.type !== 'card') {
-        const xField = await visual.getDataFields('Category');
-        console.log('X Field: ', xField);
-        const yField = await visual.getDataFields('Y');
-        console.log('Y Field: ', yField);
-      }
 
-      const filters = await visual.getFilters();
-      console.log('Filters: ', filters);
+          const xFields: any = await visual.getDataFields('Category');
+          let xField = "";
 
-        // This info is not useful atm
-        //const layout = visual.layout;
-        // console.log(' Layout: ', layout);
-        // const capability = await visual.getCapabilities();
-        // capability.dataRoles?.forEach((role) => {
-        //   // print the visual type
-        //   console.log(role.name, ' Display Name: ', role.displayName);
-        // })
+          if(models.isColumn(xFields[0])) {
+            xField = xFields[0].column;
+          }
+          const xLabel = await visual.getDataFieldDisplayName('Category', 0);
+          const yFields: any = await visual.getDataFields('Y');
+          let yField0 = "";
+          let yField1 = "";
 
-      console.log('----------------------------------------------------');
+          if(models.isMeasure(yFields[0])) {
+            yField0 = yFields[0].measure;
+          }
+
+          if(models.isMeasure(yFields[1])) {
+            yField1 = yFields[1].measure;
+          }
+
+          const yLabel0 = await visual.getDataFieldDisplayName('Y', 0);
+          const yLabel1 = await visual.getDataFieldDisplayName('Y', 1);
+
+          const result = await visual.exportData(models.ExportDataType.Summarized);
+          const data = result.data.split('\r');
+          const splitData1 = data[1].split(',');
+          const splitDataN = data[data.length - 2].split(',');
+
+          this.initialData.push({type: visual.type, result: result});
+
+          axis.xField = xField;
+          axis.xLabel = xLabel;
+          axis.xRange = splitData1[0].replace("\n", "") + " to " + splitDataN[0].replace("\n", "");
+          axis.yField.push(yField0);
+          axis.yField.push(yField1);
+          axis.yLabel.push(yLabel0);
+          axis.yLabel.push(yLabel1);
+          axis.yRange.push(splitData1[1].replace("\n", "") + " to " + splitDataN[1].replace("\n", ""));
+          axis.yRange.push(splitData1[2].replace("\n", "") + " to " + splitDataN[2].replace("\n", ""));
+          insight.insight = xField + ' ' + splitData1[0].replace("\n", "") + ' ' + yField0 + splitData1[1].replace("\n", "") + ' ' + yField1 + ' ' + splitData1[1].replace("\n", "")
+        }
+
+        if(visual.type === 'card') {
+          const result = await visual.exportData(models.ExportDataType.Summarized);
+          const data = result.data.split('\r');
+          axis.xField = data[0].replace("\n", "");
+          axis.xLabel = data[0].replace("\n", "");
+          axis.xRange = data[1].replace("\n", "");
+
+          insight.insight = axis.xField + ' ' + axis.xRange
+        }
+
+        const filters = await visual.getFilters();
+        mark.interaction = new Interaction();
+        mark.interaction.targets = new Array<models.IFilterGeneralTarget>();
+        mark.interaction.filterType = new Array<models.FilterType>();
+
+        for(const filter of filters) {
+          mark.interaction.targets.push(filter.target);
+          mark.interaction.filterType.push(filter.filterType);
+        }
+
+        this.dashboardVisuals.push(new Visual(visual.title, visual.type, axis, insight, mark));
      }
+
+
+     this.dashboard = new Dashboard(this.dashboardVisuals, "Dummy Domain");
+     this.dashboard.showDashboardValues();
 
     }
 
@@ -102,17 +159,14 @@ class Button extends React.Component<ButtonProps, {}> {
 
           await this.checkVisChanged();
 
-          console.log('Initial Data --> ', this.initialData);
-          console.log('Final Data --> ', this.finalData);
-
           // Compare intial and finalData
           for(const inData of this.initialData) {
             for(const fiData of this.finalData) {
               if(inData.type === fiData.type) {
                 if(inData.result.data === fiData.result.data) {
-                  console.log('Data didnt change');
+                  console.log(fiData.type, ' Cross-Highlighting', fiData.result.data); // data is not correctly shown
                 } else {
-                  console.log('Data definitely changed in type --> ', inData.type);
+                  console.log(fiData.type, ' Cross-Filtering ', fiData.result.data); //for extra information data can be viewed
                 }
               }
             }
@@ -128,14 +182,12 @@ class Button extends React.Component<ButtonProps, {}> {
             for(const vis of this.renderedVis) {
 
               if(vis === visual.name && visual.type !== 'slicer') {
-                console.log('Type --> ', visual.type, ' --> ', visual.title, 'has changed' );
+                console.log(visual.type, ' : ', visual.title, ' has rendered again' );
                 const result = await visual.exportData(models.ExportDataType.Summarized);
                 this.finalData.push({type: visual.type, result: result});
               }
             }
           }
-
-          console.log('______________________________________________');
         }
       }
 
