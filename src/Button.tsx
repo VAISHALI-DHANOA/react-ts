@@ -135,22 +135,28 @@ class Button extends React.Component<ButtonProps, {}> {
 
     async registerEvents(): Promise<void> {
 
+        // Start from here:
+        // #1 : Capture what has changed
+        // #2 : Which vis have rendered?
+        // #3 : Highlighted: Opacity changed
+        // #4 : Filtered: Size, Legend, Axis : changed
+        // #5 : Display changed information
+        // #6 : Create a DFS to show that what has changed will be visited again
+        // #7: Create an order of similarly ranked visualizations for the order in the DFS
+        // report.on("dataSelected", function(event) {
+        //   console.log('Data Selected'); // , event.detail);
+        // })
 
         this.report.on("visualRendered", (event: any) => {
           const vis = event.detail.name as string;
           this.renderedVis.push(vis);
         })
 
-        /*
-        // report.on("dataSelected", function(event) {
-        //   console.log('Data Selected'); // , event.detail);
-        // })
-
         // if you change a visual this is called
         // report.on("selectionChanged", function(event) {
         //   console.log("Selection changed ", event);
         // })
-        */
+
       }
 
       async getChangedVisuals(): Promise<void> {
