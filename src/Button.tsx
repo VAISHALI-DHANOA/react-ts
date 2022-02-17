@@ -25,7 +25,7 @@ class Button extends React.Component<ButtonProps, {}> {
     constructor(props: ButtonProps) {
         super(props);
         this.dashboard = new Dashboard([], "Dummy Domain");
-        this.dashboardVisuals = new Array<Visual>(); //only for specific dashboard
+        this.dashboardVisuals = new Array<Visual>();
     }
 
     render(): JSX.Element {
@@ -43,6 +43,9 @@ class Button extends React.Component<ButtonProps, {}> {
       this.report = this.props.myReport as Report;
       this.pages = await this.report.getPages();
       this.visuals = await this.pages[1].getVisuals();
+      this.dashboardVisuals = new Array<Visual>();
+
+      console.log('Visual numbers: ', this.visuals.length);
 
       for( const visual of this.visuals) {
         const axis = new Axis();
@@ -107,6 +110,9 @@ class Button extends React.Component<ButtonProps, {}> {
         if(visual.type === 'card') {
           const result = await visual.exportData(models.ExportDataType.Summarized);
           const data = result.data.split('\r');
+
+          this.initialData.push({type: visual.type, result: result});
+
           axis.xField = data[0].replace("\n", "");
           axis.xLabel = data[0].replace("\n", "");
           axis.xRange = data[1].replace("\n", "");
@@ -143,9 +149,11 @@ class Button extends React.Component<ButtonProps, {}> {
         // #5 : Display changed information
         // #6 : Create a DFS to show that what has changed will be visited again
         // #7: Create an order of similarly ranked visualizations for the order in the DFS
-        // report.on("dataSelected", function(event) {
-        //   console.log('Data Selected'); // , event.detail);
-        // })
+
+        this.report.on("dataSelected", function(event: any) {
+          console.log('Data Selected'); // , event.detail);
+          console.log(event.detail);
+        })
 
         this.report.on("visualRendered", (event: any) => {
           const vis = event.detail.name as string;
@@ -170,9 +178,9 @@ class Button extends React.Component<ButtonProps, {}> {
             for(const fiData of this.finalData) {
               if(inData.type === fiData.type) {
                 if(inData.result.data === fiData.result.data) {
-                  console.log(fiData.type, ' Cross-Highlighting', fiData.result.data); // data is not correctly shown
+                  console.log(fiData.type, ' Cross-Highlighting');//, fiData.result.data); // data is not correctly shown
                 } else {
-                  console.log(fiData.type, ' Cross-Filtering ', fiData.result.data); //for extra information data can be viewed
+                  console.log(fiData.type, ' Cross-Filtering');//, fiData.result.data); //for extra information data can be viewed
                 }
               }
             }
